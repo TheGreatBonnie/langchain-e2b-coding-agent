@@ -31,13 +31,11 @@ from e2b import Sandbox as E2BSandbox
 from langchain_e2b import E2BSandbox as E2BBackend
 from langchain_openrouter import ChatOpenRouter
 
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.live import Live
-from rich.markdown import Markdown
-from rich.panel import Panel
-from rich.spinner import Spinner
+
+from agent_display import AgentDisplay
 
 from deepagents import create_deep_agent
 
@@ -203,79 +201,6 @@ def create_coding_agent():
     )
 
 
-class AgentDisplay:
-    """Manages the display of agent progress."""
-
-    def __init__(self):
-        self.printed_count = 0
-        self.spinner = Spinner("dots", text="Thinking...")
-
-    def update_spinner(self, text: str):
-        self.spinner = Spinner("dots", text=text)
-
-    def print_message(self, msg):
-        if isinstance(msg, HumanMessage):
-            console.print(Panel(str(msg.content), title="You", border_style="blue"))
-
-        elif isinstance(msg, AIMessage):
-            content = msg.content
-            if isinstance(content, list):
-                text_parts = [
-                    p.get("text", "")
-                    for p in content
-                    if isinstance(p, dict) and p.get("type") == "text"
-                ]
-                content = "\n".join(text_parts)
-
-            if content and content.strip():
-                console.print(
-                    Panel(Markdown(content), title="Agent", border_style="green")
-                )
-
-            if msg.tool_calls:
-                for tc in msg.tool_calls:
-                    name = tc.get("name", "unknown")
-                    args = tc.get("args", {})
-                    if name == "execute":
-                        cmd = args.get("command", "")
-                        console.print(f"  [bold yellow]>> Running:[/] {cmd[:80]}...")
-                        self.update_spinner(f"Running: {cmd[:30]}...")
-                    elif name == "read_file":
-                        path = args.get("file_path", "")
-                        console.print(f"  [bold cyan]>> Reading:[/] {path}")
-                    elif name == "write_file":
-                        path = args.get("file_path", "")
-                        console.print(f"  [bold yellow]>> Writing:[/] {path}")
-                        self.update_spinner(f"Writing: {path}")
-                    elif name == "edit_file":
-                        path = args.get("file_path", "")
-                        console.print(f"  [bold yellow]>> Editing:[/] {path}")
-                    elif name == "web_search":
-                        query = args.get("query", "")
-                        console.print(f"  [bold blue]>> Searching:[/] {query[:50]}...")
-                        self.update_spinner(f"Searching: {query[:30]}...")
-                    elif name == "glob":
-                        pat = args.get("pattern", "")
-                        console.print(f"  [bold magenta]>> Finding:[/] {pat}")
-                    elif name == "grep":
-                        pat = args.get("pattern", "")
-                        console.print(f"  [bold magenta]>> Searching code:[/] {pat[:40]}...")
-                    elif name == "task":
-                        desc = args.get("description", "delegating...")
-                        console.print(f"  [bold magenta]>> Delegating:[/] {desc[:60]}...")
-                        self.update_spinner(f"Delegating: {desc[:30]}...")
-
-        elif isinstance(msg, ToolMessage):
-            name = getattr(msg, "name", "")
-            if name == "execute":
-                console.print(f"  [green]✓ Command executed[/]")
-            elif name in ("write_file", "edit_file"):
-                console.print(f"  [green]✓ File written[/]")
-            elif name == "web_search":
-                if "error" not in msg.content.lower()[:100]:
-                    console.print(f"  [green]✓ Search complete[/]")
-            elif name == "task":
-                console.print(f"  [green]✓ Subagent complete[/]")
 
 
 async def main():
@@ -294,7 +219,7 @@ async def main():
 
     console.print("[dim]Starting E2B sandbox...[/]")
     try:
-        sandbox = E2BSandbox.create()
+        sandbox = E2BSandbox.create(timeout=3600)
         backend = E2BBackend(sandbox=sandbox, workdir=REMOTE_HOME)
         console.print("[green]✓ Sandbox ready[/]")
         console.print("[dim]Uploading agent config to sandbox...[/]")
@@ -310,7 +235,7 @@ async def main():
     console.print()
 
     agent = create_coding_agent()
-    display = AgentDisplay()
+    display = AgentDisplay(console=console)
 
     try:
         with Live(
@@ -322,14 +247,11 @@ async def main():
                 stream_mode="values",
             ):
                 if "messages" in chunk:
-                    messages = chunk["messages"]
-                    if len(messages) > display.printed_count:
-                        live.stop()
-                        for msg in messages[display.printed_count:]:
-                            display.print_message(msg)
-                        display.printed_count = len(messages)
-                        live.start()
-                        live.update(display.spinner)
+                    live.stop()
+                    for msg in chunk["messages"]:
+                        display.print_message(msg)
+                    live.start()
+                    live.update(display.spinner)
     except Exception as e:
         console.print(f"[red]Error during agent execution: {e}[/]")
     finally:
