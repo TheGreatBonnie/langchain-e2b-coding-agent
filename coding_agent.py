@@ -31,6 +31,7 @@ from e2b import Sandbox as E2BSandbox
 from langchain_e2b import E2BSandbox as E2BBackend
 from langchain_openrouter import ChatOpenRouter
 
+from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 from langchain_core.tools import tool
 from rich.console import Console
 from rich.live import Live
@@ -130,13 +131,12 @@ def _download_project():
 
 
 @tool
-def web_search(query: str, max_results: int = 5, topic: str = "general") -> dict:
+def web_search(query: str, max_results: int = 5) -> dict:
     """Search the web for current information.
 
     Args:
         query: The search query (be specific and detailed)
         max_results: Number of results to return (default: 5)
-        topic: 'general' for most queries, 'news' for current events
 
     Returns:
         Search results with titles, URLs, and content excerpts.
@@ -144,14 +144,18 @@ def web_search(query: str, max_results: int = 5, topic: str = "general") -> dict
     if not query.strip():
         return {"error": "Empty query"}
     try:
-        from tavily import TavilyClient
-        api_key = os.environ.get("TAVILY_API_KEY")
-        if not api_key:
-            return {"error": "TAVILY_API_KEY not set"}
-        client = TavilyClient(api_key=api_key)
-        return client.search(query, max_results=max_results, topic=topic)
-    except ImportError:
-        return {"error": "tavily package not installed"}
+        wrapper = DuckDuckGoSearchAPIWrapper(max_results=max_results)
+        results = wrapper.results(query, max_results=max_results)
+        return {
+            "results": [
+                {
+                    "title": r["title"],
+                    "url": r["link"],
+                    "content": r["snippet"],
+                }
+                for r in results
+            ]
+        }
     except Exception as e:
         return {"error": f"Search failed: {e}"}
 

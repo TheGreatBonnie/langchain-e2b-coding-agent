@@ -7,9 +7,9 @@ requires-python = ">=3.11"
 dependencies = [
     "deepagents>=0.6.12",
     "e2b>=2.30.0",
+    "langchain-community>=0.4.2",
     "langchain-e2b>=0.0.5",
     "langchain-openrouter>=0.2.5",
     "python-dotenv>=1.2.2",
     "rich>=15.0.0",
-    "tavily-python>=0.7.26",
 ]
