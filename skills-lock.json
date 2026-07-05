@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "technical-blog-writing": {
+      "source": "inference-sh/skills",
+      "sourceType": "github",
+      "skillPath": "guides/writing/technical-blog-writing/SKILL.md",
+      "computedHash": "8f2edaf29395597a5ff7d81f7945ec275f38aa609be54ccddf9b175e130adbaf"
+    },
+    "technical-writing": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "technical-writing/SKILL.md",
+      "computedHash": "0544628a33393af1909297224d9346bdc2fedeb47ff5281f77e9b9dac97655fa"
+    }
+  }
+}

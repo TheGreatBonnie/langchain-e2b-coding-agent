@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "copilotkit": {
+      "type": "remote",
+      "url": "https://mcp.copilotkit.ai/sse",
+      "enabled": true
+    },
+    "docs-langchain": {
+      "type": "remote",
+      "url": "https://docs.langchain.com/mcp",
+      "enabled": true
+    }
+  },
+  "plugin": ["superpowers@git+https://github.com/obra/superpowers.git"]
+}
